@@ -10,6 +10,7 @@ class Bat(val startingHeight: Dp) {
     var position by mutableStateOf(startingHeight)
     var size = 75.dp
     var xOffset = (-300).dp
+
     private var velocity by mutableStateOf(0.dp)
     private val diveSpeed = (-8).dp
     private val reverseGravity = 0.5.dp

@@ -3,11 +3,16 @@ package com.example.beastrun
 import android.app.Activity
 import android.os.Bundle
 import android.view.Window
+import android.widget.Button
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.Animatable
+import androidx.compose.animation.core.Easing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -26,6 +31,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Button
 import androidx.compose.material3.Scaffold
@@ -33,6 +40,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -50,6 +58,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
@@ -68,14 +77,17 @@ import kotlinx.serialization.Serializer
 val blockyFontFamily = FontFamily(
     Font(R.font.blocky)
 )
-const val STARTING_PILLAR = 0
+const val STARTING_PILLAR_XPOSITION = 60
 const val NAVBAR_HEIGHT = 90
-const val STARTING_HEIGHT = 350
+const val STARTING_BAT_HEIGHT = 350
 const val FLOOR = -10
-const val PLAYING_AREA = 700
-const val CEILING = PLAYING_AREA - 60
+const val PLAYING_AREA_HEIGHT = 700
+const val PLAYING_AREA_WIDTH = 400
+const val CEILING = PLAYING_AREA_HEIGHT - 60
+var score by mutableIntStateOf(0)
 var playing by mutableStateOf(false)
 var gameOver by mutableStateOf(false)
+var generatedPillars by mutableStateOf(false)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -95,11 +107,10 @@ class MainActivity : ComponentActivity() {
                         startDestination = ScreenA
                     ) {
                         composable<ScreenA> {
-                            GenerateBackground(1)
+                            Background(R.drawable.lakehouse).StaticBackground()
                             StartScreen(navController)
                         }
                         composable<PlayScreenData> {
-                            GenerateBackground(2)
                             PlayScreen(navController)
                         }
                         composable<ScoreScreenData> {
@@ -124,24 +135,6 @@ data class ScoreScreenData(
     val name: String?,
     val score: Int
 )
-
-@Composable
-fun GenerateBackground(backgroundNo: Int){
-    val backgroundImage = when (backgroundNo) {
-        0 -> R.drawable.brownpipe
-        1 -> R.drawable.lakehouse
-        2 -> R.drawable.sewer
-        // Default image
-        else -> R.drawable.brownpipe
-    }
-    //Background
-    Image(
-        painter = painterResource(id = backgroundImage),
-        contentDescription = null,
-        contentScale = ContentScale.Crop,
-        modifier = Modifier.fillMaxHeight()
-    )
-}
 
 @Composable
 fun StartScreen(navController: NavController){
@@ -192,45 +185,22 @@ fun StartScreen(navController: NavController){
     }
 }
 
+
+
 @Composable
 fun PlayScreen(navController: NavController){
-    val bat = remember { Bat(startingHeight = STARTING_HEIGHT.dp) }
-    val pillar = remember { Pillar(startingXposition = STARTING_PILLAR.dp) }
+    val background = remember { Background(R.drawable.sewer) }
+    val bat = remember { Bat(startingHeight = STARTING_BAT_HEIGHT.dp) }
+    val pillar = remember { Pillar(startingXposition = STARTING_PILLAR_XPOSITION.dp) }
 
-    if (playing) {
-        LaunchedEffect(Unit) {
-            while (true) {
-                bat.update()
-                pillar.update()
-                delay(16)
-            }
-        }
-    } else {
-        bat.position = STARTING_HEIGHT.dp
-
-        if (gameOver){
-            Row(
-                modifier = Modifier
-                    .fillMaxSize(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    text = "YOU LOSE",
-                    fontFamily = blockyFontFamily,
-                    fontSize = 80.sp,
-                    color = Color.Red
-                )
-            }
-        }
-    }
+    background.AnimateBackground()
     //Screen Container
     Column (
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        //Top pipe
+        //Top bar
         Row (
             modifier = Modifier
                 .weight(1f)
@@ -238,62 +208,105 @@ fun PlayScreen(navController: NavController){
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
-            GenerateBackground(backgroundNo = 0)
+            Background(R.drawable.brownpipe).StaticBackground()
         }
-        //Playing area
-        Row (
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(PLAYING_AREA.dp)
-        ) {
-            Box (
-                modifier = Modifier.fillMaxSize()
-            ){
-                //Bat gif container
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .offset(x = bat.xOffset, y = -bat.position)
-                ){
-                    AsyncImage(
-                        model = R.drawable.flyingbatgif,
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.size(bat.size)
-                    )
-                }
-                //Top pipe
-                Box (
-                    modifier = Modifier
-                        .height(pillar.topHeight)
-                        .width(pillar.width)
-                        .align(Alignment.TopEnd)
-                        .offset(x = pillar.xPosition)
-                        .background(Color.Cyan)
-                ) {
-                    pillar.checkCollision(bat, true)
-                }
-                //Bottom pipe
-                Box (
-                    modifier = Modifier
-                        .height(pillar.bottomHeight)
-                        .width(pillar.width)
-                        .align(Alignment.BottomEnd)
-                        .offset(x = pillar.xPosition)
-                        .background(Color.Cyan)
-                ) {
-                    pillar.checkCollision(bat, false)
-                }
+
+        PlayAreaContainer(bat, pillar)
+        NavBar(navController = navController, bat)
+    }
+
+    FrameLoop(bat, pillar, background)
+}
+
+@Composable
+fun FrameLoop(bat: Bat, pillar: Pillar, background: Background){
+    if (playing) {
+        LaunchedEffect(Unit) {
+            while (true) {
+                background.update()
+                bat.update()
+                pillar.update()
+                delay(16)
             }
         }
-        NavBar(navController = navController, bat)
+    } else {
+        if (gameOver){
+            GameOverPopUp(pillar)
+        }else{
+            bat.position = STARTING_BAT_HEIGHT.dp
+        }
+    }
+}
+
+@Composable
+fun PlayAreaContainer(bat: Bat, pillar: Pillar){
+    //Playing area
+    Box (
+        modifier = Modifier
+            .height(PLAYING_AREA_HEIGHT.dp)
+            .width(PLAYING_AREA_WIDTH.dp)
+    ){
+        //Bat gif container
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .offset(x = bat.xOffset, y = -bat.position)
+        ){
+            AsyncImage(
+                model = R.drawable.flyingbatgif,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.size(bat.size)
+            )
+        }
+        if (!generatedPillars) {
+            pillar.randomBottomHeight()
+            generatedPillars = true
+        }
+
+        //Top pipe
+        Box (
+            modifier = Modifier
+                .height(pillar.topHeight)
+                .width(pillar.width)
+                .align(Alignment.TopEnd)
+                .offset(x = pillar.xPosition)
+                .background(Color.Cyan)
+        ) {
+            Background(R.drawable.pillar).StaticBackground()
+            pillar.checkCollision(bat, true)
+        }
+
+        //Bottom pipe
+        Box (
+            modifier = Modifier
+                .height(pillar.bottomHeight)
+                .width(pillar.width)
+                .align(Alignment.BottomEnd)
+                .offset(x = pillar.xPosition)
+        ) {
+            Background(R.drawable.pillar).StaticBackground()
+            pillar.checkCollision(bat, false)
+        }
+
+        // "Score" text
+        Button(
+            onClick = {
+            }
+        ) {
+            Text(
+                text = "SCORE: $score",
+                fontFamily = blockyFontFamily,
+                fontSize = 20.sp
+            )
+        }
     }
 }
 
 @Composable
 fun NavBar(navController: NavController, bat: Bat){
     Box(modifier = Modifier.height(NAVBAR_HEIGHT.dp)){
-        GenerateBackground(backgroundNo = 0)
+        Background(R.drawable.brownpipe).StaticBackground()
         //Button box
         Row(
             modifier = Modifier.fillMaxSize(),
@@ -333,8 +346,10 @@ fun NavBar(navController: NavController, bat: Bat){
                 // "Dive" button
                 Button(
                     onClick = {
-                        playing = true
-                        bat.dive()
+                        if (!gameOver){
+                            playing = true
+                            bat.dive()
+                        }
                     }
                 ) {
                     Text(
@@ -350,6 +365,37 @@ fun NavBar(navController: NavController, bat: Bat){
             ){
 
             }
+        }
+    }
+}
+
+@Composable
+fun GameOverPopUp(pillar: Pillar){
+    Column(
+        modifier = Modifier
+            .fillMaxSize(),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = "YOU LOSE",
+            fontFamily = blockyFontFamily,
+            fontSize = 80.sp,
+            color = Color.Red
+        )
+        // "Play again" button
+        Button(
+            onClick = {
+                score = 0
+                gameOver = false
+                pillar.pillarReset(true)
+            }
+        ) {
+            Text(
+                text = "PLAY AGAIN",
+                fontFamily = blockyFontFamily,
+                fontSize = 30.sp
+            )
         }
     }
 }
