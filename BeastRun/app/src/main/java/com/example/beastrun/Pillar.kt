@@ -11,14 +11,15 @@ import kotlin.random.Random
 class Pillar (val startingXposition: Dp) {
     var xPosition by mutableStateOf(startingXposition)
     var bottomHeight by mutableStateOf(100.dp)
-    var topHeight by mutableStateOf(100.dp)
-    val width = 70.dp
+    var topHeight by mutableStateOf(120.dp)
+    val SEGMENT_HEIGHT = 120.dp
+    val width = 60.dp
 
     private var scoreCount by mutableStateOf(false)
     private var speed by mutableStateOf((-2).dp)
     private val gap = 200.dp
     private val leniency = 10.dp
-    private val smallestHeight = 50
+    private val smallestHeight = 100
     private val tallestHeight = 400
 
     fun update() {

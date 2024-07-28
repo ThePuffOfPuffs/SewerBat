@@ -51,6 +51,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalWindowInfo
@@ -78,12 +79,13 @@ val blockyFontFamily = FontFamily(
     Font(R.font.blocky)
 )
 const val STARTING_PILLAR_XPOSITION = 60
-const val NAVBAR_HEIGHT = 90
+const val NAVBAR_HEIGHT = 80
+const val TOP_BAR_HEIGHT = 20
 const val STARTING_BAT_HEIGHT = 350
 const val FLOOR = -10
-const val PLAYING_AREA_HEIGHT = 700
-const val PLAYING_AREA_WIDTH = 400
-const val CEILING = PLAYING_AREA_HEIGHT - 60
+var PLAYING_AREA_HEIGHT = 0
+var PLAYING_AREA_WIDTH = 0
+var CEILING = 0
 var score by mutableIntStateOf(0)
 var playing by mutableStateOf(false)
 var gameOver by mutableStateOf(false)
@@ -95,6 +97,9 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             BeastRunTheme {
+                PLAYING_AREA_HEIGHT = LocalConfiguration.current.screenHeightDp - NAVBAR_HEIGHT - TOP_BAR_HEIGHT
+                PLAYING_AREA_WIDTH = LocalConfiguration.current.screenWidthDp
+                CEILING = PLAYING_AREA_HEIGHT - 60
                 val navController = rememberNavController ()
                 Scaffold (
                     topBar = {},
@@ -185,14 +190,13 @@ fun StartScreen(navController: NavController){
     }
 }
 
-
-
 @Composable
 fun PlayScreen(navController: NavController){
     val background = remember { Background(R.drawable.sewer) }
     val bat = remember { Bat(startingHeight = STARTING_BAT_HEIGHT.dp) }
     val pillar = remember { Pillar(startingXposition = STARTING_PILLAR_XPOSITION.dp) }
 
+    bat.xOffset = -(PLAYING_AREA_WIDTH - 100).dp
     background.AnimateBackground()
     //Screen Container
     Column (
@@ -216,26 +220,6 @@ fun PlayScreen(navController: NavController){
     }
 
     FrameLoop(bat, pillar, background)
-}
-
-@Composable
-fun FrameLoop(bat: Bat, pillar: Pillar, background: Background){
-    if (playing) {
-        LaunchedEffect(Unit) {
-            while (true) {
-                background.update()
-                bat.update()
-                pillar.update()
-                delay(16)
-            }
-        }
-    } else {
-        if (gameOver){
-            GameOverPopUp(pillar)
-        }else{
-            bat.position = STARTING_BAT_HEIGHT.dp
-        }
-    }
 }
 
 @Composable
@@ -273,7 +257,7 @@ fun PlayAreaContainer(bat: Bat, pillar: Pillar){
                 .offset(x = pillar.xPosition)
                 .background(Color.Cyan)
         ) {
-            Background(R.drawable.pillar).StaticBackground()
+            Background(R.drawable.pillar).PillarBackground(pillar.SEGMENT_HEIGHT.value.toInt(), pillar.topHeight.value.toDouble())
             pillar.checkCollision(bat, true)
         }
 
@@ -284,8 +268,9 @@ fun PlayAreaContainer(bat: Bat, pillar: Pillar){
                 .width(pillar.width)
                 .align(Alignment.BottomEnd)
                 .offset(x = pillar.xPosition)
+                .background(Color.Cyan)
         ) {
-            Background(R.drawable.pillar).StaticBackground()
+            Background(R.drawable.pillar).PillarBackground(pillar.SEGMENT_HEIGHT.value.toInt(), pillar.bottomHeight.value.toDouble())
             pillar.checkCollision(bat, false)
         }
 
@@ -355,7 +340,7 @@ fun NavBar(navController: NavController, bat: Bat){
                     Text(
                         text = "DIVE",
                         fontFamily = blockyFontFamily,
-                        fontSize = 50.sp
+                        fontSize = 40.sp
                     )
                 }
             }
@@ -396,6 +381,26 @@ fun GameOverPopUp(pillar: Pillar){
                 fontFamily = blockyFontFamily,
                 fontSize = 30.sp
             )
+        }
+    }
+}
+
+@Composable
+fun FrameLoop(bat: Bat, pillar: Pillar, background: Background){
+    if (playing) {
+        LaunchedEffect(Unit) {
+            while (true) {
+                background.update()
+                bat.update()
+                pillar.update()
+                delay(16)
+            }
+        }
+    } else {
+        if (gameOver){
+            GameOverPopUp(pillar)
+        }else{
+            bat.position = STARTING_BAT_HEIGHT.dp
         }
     }
 }

@@ -9,7 +9,7 @@ import androidx.compose.ui.unit.dp
 class Bat(val startingHeight: Dp) {
     var position by mutableStateOf(startingHeight)
     var size = 75.dp
-    var xOffset = (-300).dp
+    var xOffset = 0.dp
 
     private var velocity by mutableStateOf(0.dp)
     private val diveSpeed = (-8).dp
