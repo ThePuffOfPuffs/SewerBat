@@ -112,7 +112,7 @@ class MainActivity : ComponentActivity() {
                         startDestination = ScreenA
                     ) {
                         composable<ScreenA> {
-                            Background(R.drawable.lakehouse).StaticBackground()
+                            Background(R.drawable.sewercropped).StaticBackground()
                             StartScreen(navController)
                         }
                         composable<PlayScreenData> {
@@ -152,8 +152,8 @@ fun StartScreen(navController: NavController){
         AsyncImage(
             model = R.drawable.flyingbatgif,
             contentDescription = null,
-            contentScale = ContentScale.FillBounds,
-            modifier = Modifier.size(100.dp)
+            contentScale = ContentScale.Fit,
+            modifier = Modifier.size(75.dp)
         )
     }
     Row(
@@ -216,7 +216,7 @@ fun PlayScreen(navController: NavController){
         }
 
         PlayAreaContainer(bat, pillar)
-        NavBar(navController = navController, bat)
+        NavBar(navController = navController, bat, pillar, background)
     }
 
     FrameLoop(bat, pillar, background)
@@ -230,19 +230,6 @@ fun PlayAreaContainer(bat: Bat, pillar: Pillar){
             .height(PLAYING_AREA_HEIGHT.dp)
             .width(PLAYING_AREA_WIDTH.dp)
     ){
-        //Bat gif container
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .offset(x = bat.xOffset, y = -bat.position)
-        ){
-            AsyncImage(
-                model = R.drawable.flyingbatgif,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.size(bat.size)
-            )
-        }
         if (!generatedPillars) {
             pillar.randomBottomHeight()
             generatedPillars = true
@@ -257,6 +244,7 @@ fun PlayAreaContainer(bat: Bat, pillar: Pillar){
                 .offset(x = pillar.xPosition)
                 .background(Color.Cyan)
         ) {
+
             Background(R.drawable.pillar).PillarBackground(pillar.SEGMENT_HEIGHT.value.toInt(), pillar.topHeight.value.toDouble())
             pillar.checkCollision(bat, true)
         }
@@ -274,6 +262,15 @@ fun PlayAreaContainer(bat: Bat, pillar: Pillar){
             pillar.checkCollision(bat, false)
         }
 
+        //Bat gif container
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .offset(x = bat.xOffset, y = -bat.position)
+        ){
+            bat.BatImage()
+        }
+
         // "Score" text
         Button(
             onClick = {
@@ -289,7 +286,7 @@ fun PlayAreaContainer(bat: Bat, pillar: Pillar){
 }
 
 @Composable
-fun NavBar(navController: NavController, bat: Bat){
+fun NavBar(navController: NavController, bat: Bat, pillar: Pillar, background: Background){
     Box(modifier = Modifier.height(NAVBAR_HEIGHT.dp)){
         Background(R.drawable.brownpipe).StaticBackground()
         //Button box
@@ -309,7 +306,7 @@ fun NavBar(navController: NavController, bat: Bat){
                 // "Score" button
                 Button(
                     onClick = {
-                        playing = false
+                        ResetGame(bat, pillar, background)
                         navController.navigate(ScoreScreenData(name = "Jeff", score = 5))
                     }
                 ) {
@@ -355,7 +352,7 @@ fun NavBar(navController: NavController, bat: Bat){
 }
 
 @Composable
-fun GameOverPopUp(pillar: Pillar){
+fun GameOverPopUp(bat: Bat, pillar: Pillar, background: Background){
     Column(
         modifier = Modifier
             .fillMaxSize(),
@@ -371,9 +368,7 @@ fun GameOverPopUp(pillar: Pillar){
         // "Play again" button
         Button(
             onClick = {
-                score = 0
-                gameOver = false
-                pillar.pillarReset(true)
+                ResetGame(bat, pillar, background)
             }
         ) {
             Text(
@@ -387,24 +382,29 @@ fun GameOverPopUp(pillar: Pillar){
 
 @Composable
 fun FrameLoop(bat: Bat, pillar: Pillar, background: Background){
-    if (playing) {
-        LaunchedEffect(Unit) {
-            while (true) {
+    LaunchedEffect(Unit) {
+        while (true) {
+            if (playing){
                 background.update()
                 bat.update()
                 pillar.update()
-                delay(16)
             }
-        }
-    } else {
-        if (gameOver){
-            GameOverPopUp(pillar)
-        }else{
-            bat.position = STARTING_BAT_HEIGHT.dp
+            delay(16)
         }
     }
+    if (gameOver){
+        bat.death()
+        GameOverPopUp(bat, pillar, background)
+    }
 }
-
+fun ResetGame(bat: Bat, pillar: Pillar, background: Background){
+    score = 0
+    playing = false
+    gameOver = false
+    bat.reset()
+    background.reset()
+    pillar.pillarReset(true)
+}
 @Composable
 fun ScoreScreen(args: ScoreScreenData){
 

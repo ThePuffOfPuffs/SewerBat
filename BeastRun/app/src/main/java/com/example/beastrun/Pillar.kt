@@ -17,14 +17,20 @@ class Pillar (val startingXposition: Dp) {
 
     private var scoreCount by mutableStateOf(false)
     private var speed by mutableStateOf((-2).dp)
-    private val gap = 200.dp
+    private val gap = 150.dp
     private val leniency = 10.dp
-    private val smallestHeight = 100
+    private val smallestHeight = 10
     private val tallestHeight = 400
 
     fun update() {
         xPosition += speed
         pillarReset(false)
+    }
+
+    private fun increaseSpeed(){
+        if (score % 5 == 0){
+            speed += (-0.5).dp
+        }
     }
 
     fun randomBottomHeight() {
@@ -49,6 +55,7 @@ class Pillar (val startingXposition: Dp) {
             }
         } else if (!scoreCount && bat.xOffset > xPosition){
             score++
+            increaseSpeed()
             scoreCount = true
         }
     }
